@@ -1,4 +1,7 @@
 
+
+
+
 // StepSer.cpp (maybe rename to step.cpp): implementation of the step class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -161,6 +164,11 @@
 //#include "VersionNo.h"// Micro$lop's file used from incrementing the version number
 #include "OrganizationStep.h"
 
+#ifdef _DEBUG
+#undef THIS_FILE
+static char THIS_FILE[]=__FILE__;
+#define new DEBUG_NEW
+#endif
 
 agitoPtrArray step::m_ptrArrayAdvAgito;  // holds onto all of the Step classes for garbage collection later
 agitoPtrArray step::m_ptrArrayFacAgito;  // holds onto all of the Step classes for garbage collection later
@@ -231,6 +239,56 @@ step::~step(){
   }
 }
 
+void step::init()
+{
+  if (NULL!=m_pAdvanced_brep_shape_representationStep) {
+    ASSERT_VALID(m_pAdvanced_brep_shape_representationStep);
+  }
+  else {
+    m_ptrArrayAgito.
+      SetSize( 1, 
+          1024 + 
+          GetScribView()->m_polygonarray.GetSize()  + 
+          GetScribView()->m_surfacearray.GetSize()  + 
+          GetScribView()->m_vertexarray.GetSize()   + 
+          GetScribView()->m_trianglearray.GetSize() + 
+          GetScribView()->m_thingarray.GetSize()    );// set grow
+    // Using CPtrArray::Add() adds now at entry 1
+    // use m_ptrArrayAgito[0] to store the header
+    m_ptrArrayAgito.SetAt(0, NULL);// location 0 reserved for header
+  }
+//CRepresentationStep::m_pStep = this;// wh 
+}
+
+void step::finFac()
+{ 
+  try{
+    if (NULL != m_pFaceted_brep_shape_representationStep){
+      if (!m_bWriteFile){
+        ASSERT_VALID(m_pFaceted_brep_shape_representationStep);
+        m_pFaceted_brep_shape_representationStep->release();
+        m_pFaceted_brep_shape_representationStep=NULL;
+      }
+    } 
+//  else {
+//  }
+  } catch(...){
+  }
+  m_pScribView = NULL;
+}
+ 
+void step::finAdv()
+{
+  if (!m_bWriteFile){
+    if (NULL != m_pAdvanced_brep_shape_representationStep){
+      ASSERT_VALID(m_pAdvanced_brep_shape_representationStep);
+      m_pAdvanced_brep_shape_representationStep->release();
+      m_pAdvanced_brep_shape_representationStep=NULL;
+    }
+  }
+  m_pScribView = NULL;
+}
+ 
 // write the step data from stepArchive(CString) into a file
 
 HRESULT step::writeStepData(FILE *stream, surfaceModelSelect lSurfaceModelSelect )
@@ -296,6 +354,726 @@ DWORD nSize = (FILENAME_MAX );
 
 int g_iFACETED_BREP_SHAPE_REPRESENTATION = CBaseStep::m_iCount;
 // write out the part design managment section
+void pdm( FILE *stream, int numRepresentationStep, char* pFilename=NULL)
+{
+  int 
+    numwrite=fputs( szEndl, stream);  
+    numwrite=fputs( szEndl, stream);  
+    numwrite=fputs("/* from STEP support schema, (part 41) */", stream);  
+    numwrite=fputs( szEndl, stream);  
+    // should write this out to an earlier point in the stream
+//          ir << ("#1078=COORDINATED_UNIVERSAL_TIME_OFFSET(5,$,.BEHIND.);"; 
+    numwrite=fputs("#1078=COORDINATED_UNIVERSAL_TIME_OFFSET(", stream); 
+
+    // wrong, you need to get the info from the locale field, since is where a user's machine has it!
+    long myTimezoneMin = _timezone/60.;
+    long myTimezoneHr  = myTimezoneMin/60.;
+    myTimezoneMin     -= myTimezoneHr*60;
+
+    TIME_ZONE_INFORMATION timeZoneInformation ;
+    DWORD dw = GetTimeZoneInformation(
+      &timeZoneInformation // time zone
+      );
+
+    if (TIME_ZONE_ID_INVALID != dw){      
+      myTimezoneMin = timeZoneInformation.Bias /60.;
+      myTimezoneHr  = myTimezoneMin/60.;
+      myTimezoneMin     -= myTimezoneHr*60;
+    }else {
+      dw = GetLastError();
+    }
+
+    char buf[32];
+    itoa( myTimezoneHr , buf, 10);
+    numwrite=fputs(buf, stream);  
+    numwrite=fputs(                                         ",", stream); 
+    itoa( myTimezoneMin, buf, 10);
+    numwrite=fputs(buf, stream);  
+    numwrite=fputs(                                         ",.BEHIND.);", stream); 
+    numwrite=fputs(szEndl, stream);  
+  
+    char createDate[FILENAME_MAX];
+    CTime theTime;
+    theTime = CTime::GetCurrentTime(); 
+
+    numwrite=fputs("#1079=LOCAL_TIME(", stream); 
+    strcpy( createDate, theTime.Format("%H,%M,%S,")); 
+
+    // wh 9/26/01
+    //try removing nonsignificant zeros
+    char* pC = createDate;
+        
+    if ('0' == *pC) {
+      strcpy( pC, pC+1);
+    }
+    
+    pC = strchr( pC, ',');
+    if (pC) {
+      pC++;
+      if ('0' == *pC) {
+        strcpy( pC, pC+1);
+      }
+    }
+    pC = strchr( pC, ',');
+    if (pC) {
+      pC++;
+      if ('0' == *pC) {
+        strcpy( pC, pC+1);
+      }
+    }
+
+    numwrite=fputs(createDate, stream);  // wh 6/04/01
+    numwrite=fputs("#1078);", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    //HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RegisteredOwner
+    numwrite=fputs("#1083=PERSON('", stream); 
+	  // rv 20011224///////////////////////////////////////////////////
+		CScribView* ptView=(CScribView::GetView());  
+		GetPrivateProfileString("STEP","First_Name" ,"",ptView->Step_FirstName ,79,ptView->workini);
+		GetPrivateProfileString("STEP","Middle_Name","",ptView->Step_MiddleName,79,ptView->workini);
+		GetPrivateProfileString("STEP","Last_Name"  ,"",ptView->Step_LastName  ,79,ptView->workini);
+
+    numwrite=fputs( szUserName, stream);  
+    numwrite=fputs("','", stream); 
+    numwrite=fputs( ptView->Step_FirstName , stream);  
+    numwrite=fputs(   "','", stream); 
+    numwrite=fputs( ptView->Step_LastName  , stream);  
+    numwrite=fputs(      "',('", stream); 
+    numwrite=fputs( ptView->Step_MiddleName, stream);  
+    numwrite=fputs(          "'),$,$);", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+//#1004=PERSONAL_ADDRESS($,$,$,$,$,$,$,$,$,'Telephone_Number',$,$,(#1083),' ');
+//#1004=ADDRESS($,$,$,$,$,$,$,$,$,'Telephone_Number',$,$,(#1083),' ');
+#if 0
+// query the registry and find out if you are on WinNt or Win9x
+
+  OSVERSIONINFO versionInfo; // version information
+  versionInfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+  BOOL bRc = GetVersionEx(
+        &versionInfo  );
+  if( 0 != bRc ){
+
+    char hkey_path[128];
+    if( VER_PLATFORM_WIN32_WINDOWS == versionInfo.dwPlatformId){
+      // based on that, get the reg owner
+      strcpy( hkey_path , "Software\\Microsoft\\Windows\\CurrentVersion\\RegisteredOrganization");
+    } 
+    else  //VER_PLATFORM_WIN32_NT
+    {
+      strcpy( hkey_path , "Software\\Microsoft\\Windows NT\\CurrentVersion\\RegisteredOrganization");    
+    }
+
+    HANDLE              hkGlobal  = NULL;
+    long                lResult;
+    DWORD               dwType, cbData;
+    PSZ   pszRegisteredOrganization = NULL;
+
+    CHAR *pc;
+
+    lResult= RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+                            hkey_path ,
+                            0, KEY_READ, &hkGlobal);
+
+    if (lResult == ERROR_SUCCESS) {
+        lResult= RegQueryValueEx(hkGlobal,
+                    "ResigteredOrganization",
+                    NULL, &dwType, NULL, &cbData);
+
+        if (lResult == ERROR_SUCCESS && dwType == REG_MULTI_SZ) {
+
+            if (pszFileList= (PSZ) _alloca(cbData)) {
+
+                lResult= RegQueryValueEx(hkGlobal,
+                                "RegisteredOrganization",
+		                        NULL, &dwType,
+                                (LPBYTE) pszRegisteredOrganization, &cbData);
+
+                if (lResult == ERROR_SUCCESS) {
+    
+                        pszRegisteredOrganization
+                    }
+                }
+            }
+        RegCloseKey(hkGlobal);
+        }
+
+    //HKLM\Software\Microsoft\Windows NT\CurrentVersion\RegisteredOrganization
+    //HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RegisteredOrganization
+  }
+#endif
+
+//  COrganizationStep* pOrganizationStep = new COrganizationStep;
+//  pOrganizationStep->m_szId            = ;
+//  pOrganizationStep->m_szName          = "Step.";
+//  pOrganizationStep->m_szDescription   = "\t,\nChicago, IL, 60606, US";
+
+    numwrite=fputs("#1084=ORGANIZATION('Step.',\n", stream); 
+    numwrite=fputs("'.\t,\n, , , US','", stream); 
+    char    szLCData[7];
+    int rv=GetLocaleInfo( LOCALE_USER_DEFAULT, LOCALE_ICOUNTRY, szLCData, 6 );
+    ASSERT( 6 >= rv );
+    if ( 6 < rv ){
+      szLCData[6]=0;
+    }
+    numwrite=fputs( szLCData, stream);  
+    numwrite=fputs("');", stream); 
+
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs("#1085=PERSON_AND_ORGANIZATION(#1083,#1084);", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs("#1086=CALENDAR_DATE(", stream); // line 46, still faulty, 
+    strcpy( createDate, theTime.Format("%Y,%d,%m")); // 6/28/01 wh only at nist would they have this convention
+
+    // wh 8/7/01
+    //try removing nonsignificant zeros
+    pC = strchr( createDate, ',');
+    if (pC) {
+      pC++;
+      if ('0' == *pC) {
+        strcpy( pC, pC+1);
+      }
+    }
+    pC = strchr( pC, ',');
+    if (pC) {
+      pC++;
+      if ('0' == *pC) {
+        strcpy( pC, pC+1);
+      }
+    }
+
+    numwrite=fputs(createDate, stream);  
+    numwrite=fputs(");", stream); 
+
+    numwrite=fputs(szEndl, stream);  
+
+//  locale myLocale ;myLocale.name;
+    numwrite=fputs("#1087=DATE_AND_TIME(#1086,#1079);", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs("#1102=APPLICATION_CONTEXT('", stream); 
+    numwrite=fputs( szAPPLICATION_CONTEXT, stream); 
+    numwrite=fputs("');", stream); 
+
+    numwrite=fputs(szEndl, stream);  
+
+
+    numwrite=fputs("#1103=APPLICATION_PROTOCOL_DEFINITION('international standard',\n'", stream); 
+    numwrite=fputs( szAPPLICATION_CONTEXT, stream); 
+    numwrite=fputs("',1994,#1102);", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs("#1104=MECHANICAL_CONTEXT('',#1102,'mechanical');", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs("#1105=PRODUCT('", stream); 
+    numwrite=fputs( "A93230303220572E4865676572", stream);  // part no
+    numwrite=fputs("','", stream); 
+    numwrite=fputs( pFilename, stream);  // part name
+    numwrite=fputs("'\n,'A PART EXAMPLE',(#1104));", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs(
+      "#1119=PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE\n('A',     'PRE?RELEASE',#1105,.MADE.);"
+      , stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs("#1155=DESIGN_CONTEXT('',#1102,'design');", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs("#1156=PRODUCT_DEFINITION('design','',#1119,#1155);", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs("#1157=PRODUCT_DEFINITION_SHAPE('','',#1156);", stream); 
+    numwrite=fputs(szEndl, stream);  
+
+    numwrite=fputs("#1158=SHAPE_DEFINITION_REPRESENTATION(#1157,#", stream); //iFirstCount
+
+//  itoa( g_iFACETED_BREP_SHAPE_REPRESENTATION  , buf, 10);
+    itoa( numRepresentationStep, buf, 10);
+    numwrite=fputs( buf, stream); 
+    numwrite=fputs(");", stream); 
+    numwrite=fputs(szEndl, stream);  
+  return;
+}
+
+// configuration management 
+void cm (FILE *stream)
+{
+  // happy nonsense never stops
+  /* need 
+    the configuration management portion of AP203
+     example does not have even a part number, so it is not a valid
+  AP203 file. 
+  - another joker
+  */
+  return;
+}
+
+const char* szNextLine = "\t";
+
+// write out the tolerance and measurement data.
+void units(FILE *stream)
+{
+#if 0
+  GetScribView()->metricdims == 0 == English
+                             == 1 == cm
+                             == 2 == mm
+#endif
+  int 
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("/* from STEP measure schema, (part 41) */", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#210 = (", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(szNextLine, stream);  
+      numwrite=fputs("LENGTH_UNIT () ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(szNextLine, stream);  
+      numwrite=fputs("NAMED_UNIT (*) ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(szNextLine, stream);  
+      numwrite=fputs("SI_UNIT (.MILLI., .METRE.) ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(szNextLine, stream);  
+      numwrite=fputs(");", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#220 = LENGTH_MEASURE_WITH_UNIT ( LENGTH_MEASURE(25.4), #210);", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#230 = DIMENSIONAL_EXPONENTS (1., 0., 0., 0., 0., 0., 0.);", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#240 = (", stream);  
+      numwrite=fputs("   CONVERSION_BASED_UNIT ('INCH', #220) ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("   LENGTH_UNIT () ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("  NAMED_UNIT (#230) );", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#250 = (", stream);  
+      numwrite=fputs("   NAMED_UNIT (*) ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("   PLANE_ANGLE_UNIT () ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("   SI_UNIT ($, .RADIAN.) );", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#260 = PLANE_ANGLE_MEASURE_WITH_UNIT \n( PLANE_ANGLE_MEASURE(0.0174532925), #250);", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#270 = DIMENSIONAL_EXPONENTS (0., 0., 0., 0., 0., 0., 0.);", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#280 = (", stream);  
+      numwrite=fputs("   CONVERSION_BASED_UNIT ('DEGREE', #260) ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("   NAMED_UNIT (#270) ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("  PLANE_ANGLE_UNIT () );", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#290 = (", stream);  
+      numwrite=fputs("   NAMED_UNIT (*) ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("   SI_UNIT ($, .STERADIAN.) ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("   SOLID_ANGLE_UNIT () );", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("/* from STEP representation schema, (part 43) */", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("#300 = UNCERTAINTY_MEASURE_WITH_UNIT ( LENGTH_MEASURE(", stream);  
+      char buf[32];
+      sprintf(buf, "%f", restol );//problem with e-0  in expresso        //wh
+      for (int i = 0; i< strlen(buf); i++){
+        buf[i] = toupper(buf[i]);
+      }
+      numwrite=fputs(buf, stream);  
+      numwrite=fputs("), #240,", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(" 'MODEL_ACCURACY', 'Maximum Tolerance applied to model');", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(szEndl, stream);  
+
+  return;
+}
+
+void garbage_collection( CPtrArray& m_ptrArrayAgito);
+
+// write out the header information
+// save step part 21 
+HRESULT step::onFileSaveStep( char*              dlgpathname
+                            , surfaceModelSelect lSurfaceModelSelect
+                            )// 21
+{
+  HRESULT hr = S_OK;
+//aSurfaceModelSelect = lSurfaceModelSelect ;
+
+  FILE *stream=NULL;
+  try {
+    // use CMemFile
+    stream  = fopen( dlgpathname, "w" );  
+    if ( stream ) {
+#if     NOTIFICATION 
+  if (m_bWriteFile)
+      GetScribView()->Notify("Creating STEP output file");
+#else
+#endif//NOTIFICATION 
+#ifdef  SHOWPROGRESS
+  if (m_bWriteFile){
+      GetScribView()->progressBarInit();
+      GetScribView()->progressBarUpdate(1);
+  }
+#endif//SHOWPROGRESS
+      
+#ifdef  EXPOSE      
+      char* technadraw_log = new char[strlen( dlgpathname)+5];      
+      if (NULL==technadraw_log) {
+        return E_OUTOFMEMORY;
+      }// wh 10/17/01
+      strcpy( technadraw_log, dlgpathname);
+      char*pCdot = strrchr( technadraw_log, '.');
+      if ( NULL != pCdot ){
+        strcat( pCdot+1, "log");
+      }
+      g_errorLog = fopen( technadraw_log, "w" );  
+      ASSERT( NULL != g_errorLog);
+      delete technadraw_log ;
+#endif//EXPOSE   
+
+      int numwrite;
+
+      numwrite=fputs("ISO-10303-21;", stream); 
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("HEADER;", stream); 
+      numwrite=fputs(szEndl, stream);  
+
+      numwrite=fputs("/* Exchange file generated using Technadraw\n * (", stream); 
+      if (lSurfaceModelSelect != shellBasedSurfaceModel){
+        numwrite=fputs("faceted", stream); 
+      }
+      else {
+        numwrite=fputs("advanced", stream); 
+      }
+
+      numwrite=fputs(" boundary representation) ", stream); 
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(" * ", stream); 
+      
+//    char szVerMajor[4];//_wVerMajor
+//    itoa( _wVerMajor, szVerMajor, 10);
+//    char szVerMinor[4];
+//    itoa( _wVerMinor, szVerMinor, 10);
+//    FILEVERSION
+#define defSTRFILEVER "1.1.0.55"
+      char pSTRFILEVER[] = defSTRFILEVER;
+      // write out the version number for tracking problems
+      // versionNo();
+//    numwrite=fputs( STRFILEVER, stream); //rv 6/13/01
+      // wh 6/16/01  
+      // We need to keep track of the version of the program which created this data 
+      //  to determine if we encounter a new bug or an existing bug.
+      numwrite=fputs( pSTRFILEVER, stream); // increment by hand
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(" */", stream); 
+      numwrite=fputs(szEndl, stream); 
+
+#ifdef  EXPOSE      
+      fprintf( g_errorLog, pSTRFILEVER);
+      fprintf( g_errorLog, "\n");
+#endif//EXPOSE   
+      
+      // description ; informal description of contents
+      // implementational_level ; id of ed. of ISO 10303-21 and
+      //the conformance class which is the data in the file 
+      //conforms two ints sep by semicolon
+      numwrite=fputs("FILE_DESCRIPTION( ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(             "/* description         */ ('STEP DATA'), ", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(             "/* implementation_level*/ '2;1');", stream);  
+                                                                        
+      numwrite=fputs(szEndl, stream);  
+      // name of exchange file
+      numwrite=fputs("FILE_NAME (\n/* name                */ \n'", stream);  
+
+      if (strlen(dlgpathname) > STEP_LINE_LENGTH ){
+        char short_dlgpathname[_MAX_PATH+FILENAME_MAX +1];// dlgpathname
+        DWORD dw0 = GetShortPathName( dlgpathname, short_dlgpathname, _MAX_PATH+FILENAME_MAX );
+        char*pCSlash = strrchr(dlgpathname, '\\');
+        if (NULL != pCSlash ){
+          pCSlash++;
+          if (strlen(pCSlash) > STEP_LINE_LENGTH ){
+  //        longtoshort(pCSlash);
+            char sName[32];
+            strncpy( pCSlash, sName, 6);
+            strncpy( sName, "~1", 2 );
+            pCSlash = strrchr( pCSlash, '.');
+            if (NULL != pCSlash){
+              strncpy(sName, pCSlash, 4 );
+            }
+            numwrite=fputs( sName, stream);  
+          }
+          else {
+            numwrite=fputs( pCSlash, stream);  
+          }
+        }
+        else {
+          numwrite=fputs( dlgpathname, stream);  
+        }
+      }
+      else {
+        numwrite=fputs( dlgpathname, stream);  
+      }
+      // timestamp
+      numwrite=fputs(        "', \n/* time_stamp          */ '", stream);  
+
+      char createDate[FILENAME_MAX];
+      startTime = CTime::GetCurrentTime(); 
+      strcpy( createDate, startTime.Format("%Y-%m-%d T%H:%M:%S")); 
+      numwrite=fputs(createDate, stream);  
+      
+#ifdef  EXPOSE      
+      fprintf( g_errorLog, createDate); 
+      fprintf( g_errorLog, "\n");
+      fprintf( g_errorLog, dlgpathname);
+      fprintf( g_errorLog, "\n\n");
+#endif//EXPOSE   
+      
+      numwrite=fputs(                       "',", stream);  
+      numwrite=fputs(szEndl, stream);  
+      //author
+      numwrite=fputs(             "/* author              */ ('", stream);  
+      // organization
+      LPDWORD anSize = &(nSize );
+      BOOL rv = GetUserName( szUserName, anSize);
+      ASSERT( 0!=rv );
+      numwrite=fputs(             szUserName, stream);  
+
+      numwrite=fputs(             "',''),", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(             "/* organization        */ ('.',\n'\t',\n ', , ', 'US'),", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(             "/* preprocessor_version*/ 'preprocessor_version',", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(             "/* originating_system  */ 'x',", stream);  
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs(             "/* authorization       */ 'unknown');", stream);  
+      numwrite=fputs(szEndl, stream);  
+//    numwrite=fputs("FILE_SCHEMA(('CONFIG_CONTROL_DESIGN'));", stream); 
+      numwrite=fputs("FILE_SCHEMA(('", stream); 
+      numwrite=fputs(szAPPLICATION_CONTEXT, stream); 
+      numwrite=fputs("'));", stream); 
+
+      //The class design is fixed to a schema filename.exp
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("ENDSEC;", stream); 
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("DATA;", stream); 
+      numwrite=fputs(szEndl, stream);  
+
+      if (shellBasedSurfaceModel == lSurfaceModelSelect )
+      {
+        units( stream);
+      }
+      else//if (faceBasedSurfaceModel == aSurfaceModelSelect )
+      {
+        units( stream);
+      }
+
+      hr = writeStepData( stream, lSurfaceModelSelect );
+      char*pC = strrchr(dlgpathname, '\\');
+      if (NULL == pC){
+        pC = strrchr(dlgpathname, '/');
+      }
+      if (NULL == pC){
+        pC = dlgpathname;
+      } else {
+        ++pC;
+      }
+      CString fileName( pC);
+      fileName.Replace('.',NULL);
+      
+#ifdef CREATESTEP
+        pdm( stream, m_pSelectRepresentationStep->getNum(), fileName.GetBufferSetLength(1+strlen(pC)));
+#else 
+        pdm( stream, iRepresentationStepNum, fileName.GetBufferSetLength(1+strlen(pC)));
+#endif
+      fileName.ReleaseBuffer();
+
+      if (0) {
+        cm( stream);
+      }
+      if ( FAILED(hr) ) {
+#if     NOTIFICATION 
+  if (m_bWriteFile)
+        GetScribView()->Notify("Problems encountered while writing STEP file!");
+#endif//NOTIFICATION 
+      }
+
+      numwrite=fputs("ENDSEC;", stream); 
+      numwrite=fputs(szEndl, stream);  
+      numwrite=fputs("END-ISO-10303-21;", stream); 
+      numwrite=fputs(szEndl, stream);  
+      
+      CTime theTime;
+      theTime = CTime::GetCurrentTime();      
+      strcpy( createDate, theTime.Format("\n/* %Y-%m-%d T%H:%M:%S*/\n"));       
+      numwrite=fputs(createDate, stream);  
+
+      fflush( stream);
+      int iStat = fclose( stream );
+      if(0==iStat ){
+        stream =NULL;
+      }
+    }
+    else {
+      ASSERT( false);// no write privilege
+#if     NOTIFICATION 
+  if (m_bWriteFile)
+      GetScribView()->Notify("Could not create STEP file");
+#endif//NOTIFICATION 
+    }
+
+
+#ifdef  SHOWPROGRESS
+  if (m_bWriteFile)
+      GetScribView()->progressBarFin();
+#endif//SHOWPROGRESS
+
+  }
+  catch ( ... ) {
+    bool bCScribView__onFileSaveStep = false;
+#if     NOTIFICATION 
+  if (m_bWriteFile)
+    GetScribView()->Notify("Problems encountered while writing STEP file!");
+#endif//NOTIFICATION 
+
+    ASSERT( bCScribView__onFileSaveStep );
+    if (NULL != stream){
+      int iStat = fclose( stream );
+      if(0==iStat ){
+        stream =NULL;
+      }
+    }
+    hr = E_FAIL;  
+  }
+
+#ifdef _DEBUG
+#ifndef CREATESTEP
+    garbage_collection(m_ptrArrayAgito);
+#endif //createstep
+#else
+    #pragma message("Fool! Risking massive memory leaks!\n")
+    // Better than letting a bad reference crash the app!
+#endif
+
+#if     NOTIFICATION 
+  if (m_bWriteFile)
+  GetScribView()->Notify("Step outputted");
+#endif//NOTIFICATION 
+
+#ifdef  EXPOSE      
+  fflush( g_errorLog);
+  int iErrorLog = fclose( g_errorLog);
+  ASSERT( 0 == iErrorLog);
+  g_errorLog = NULL;
+#endif//EXPOSE   
+
+  CRepresentation_itemStep::CountReset();// wh 10/02/01
+
+  return hr;
+}
+
+// I think this is good, but somehow some of the vertices are being lost.  // wh 7/16/01
+// write out the presentation information
+HRESULT step::presentation( stepArchive &                    ar)
+{
+  if (0<GetScribView()->toptext){
+      iraroArchive* p_ir = (iraroArchive*) ar.m_archives.GetAt(0);
+      iraroArchive& ir = * p_ir ; 
+      ir <<  "\n/* from STEP presentation resource schema, (part 46) */\n";
+    }
+  for ( int ij = 0; ij < GetScribView()->toptext; ij ++){
+    if (0 != GetScribView()->layers[GetScribView()->txtable[ij].layer]){
+//    CModel* pModel = (CModel*) (GetScribView()->m_modelarray.GetAt(GetScribView()->txtable[ij].tomodel));      
+      // shouldn't this be annotation text occurrence
+
+      CPresentable_textStep* pPresentable_textStep = NULL;
+      try {
+        pPresentable_textStep= 
+          new CPresentable_textStep( GetScribView()->txtable[ij].txt);
+      } catch (CMemoryException e) {
+        return E_OUTOFMEMORY;
+      }// wh 10/17/01
+
+      // step string terminator used to indicate inches ISO 10303-21
+      pPresentable_textStep->m_text.Replace("'", "''");
+      // but not within /* */
+      // and not when there are '' already??
+      pPresentable_textStep->Serialize(ar);
+    }
+  }
+
+
+  if (0 < GetScribView()->m_strokeList.GetCount() ){
+    POSITION pos = GetScribView()->m_strokeList.GetHeadPosition();
+    for ( CObject* pObj = GetScribView()->m_strokeList.GetHead(); 
+          pObj < 
+
+                 GetScribView()->m_strokeList.GetTail(); )
+      {
+        CStroke* pStroke  = (CStroke*)GetScribView()->m_strokeList.GetAt(pos);
+        if (0 != GetScribView()->layers[pStroke->layer]) {
+          CPolylineStep* pPolylineStep = new CPolylineStep();
+          if (NULL==pPolylineStep) {
+            return E_OUTOFMEMORY;
+          }// wh 10/17/01
+          for (int i = 0; i <pStroke->m_pointArray.GetSize(); i++){
+//          CPoint& rPoint= (pStroke->GetPoint(i));
+            pPolylineStep->Add( pStroke->GetPoint(i) );
+          }
+          if (1){
+            pPolylineStep->Serialize(ar); 
+          }
+          delete pPolylineStep;
+        }
+        pObj =  GetScribView()->m_strokeList.GetNext(pos);
+      }
+  }
+  return S_OK;
+}
+
+// create a hole or boss
+// kill face, make ring hole
+// aka kfsmr = kill face, shell, make ring
+HRESULT kfmrh_EulerOp( //CClosed_shellStep*& pS, // shell to be deleted if there are two
+               CFaceStep*          pF1,// face inherits loops from f2
+               CFaceStep*&         pF2)// face slated for execuation
+{
+  // merge f1 & f2 by removing the latter and interior loop of the former , face f2 is deleted
+  // transform the outer_loop of f2 to a ring of f1
+
+  for (int iB=0;iB < pF2->GetSize();iB++){
+    CFace_boundStep *pB = (CFace_boundStep *)pF2->GetAt(iB);
+    CFace_outer_boundStep *pO = dynamic_cast<CFace_outer_boundStep *>(pB); 
+    if (NULL == pO){
+      pF1->Add( pB);
+      continue;
+    }
+    else {
+      // demote him!
+      CFace_boundStep *pBi = new CFace_boundStep( *pO) ;
+      if (NULL==pBi) {
+        return E_OUTOFMEMORY;
+      }// wh 10/17/01
+      pF1->Add( pBi);
+    }
+  }
+//  delete pS;  pS = NULL;
+  delete pF2;
+  pF2 = NULL;
+  return S_OK;
+}
+
+
 // just adds the CFS face set to the base feature
 // when it works, then we will worry about Braid/Greyer add
 HRESULT step::addEulerFaceted( agitoAssembly* pAssembly, 
@@ -1324,6 +2102,259 @@ HRESULT step::boundsXboundsFaceted( CFace_surfaceStep*      pFace_surfaceStepOnP
   return S_OK;
 }
 
+// culling algorithm to reduce the number of calculations
+// code to calculate if the bounding boxes intersect
+// if they do, pass the calculations to do the actual intersections
+HRESULT step::polyXpolyBBFaceted( int ipp, // index of positive polygon
+                                  int ipn, // index of negative polygon                                
+                                  CPoly_loopStepEx* pPolyIntersectionPoints , // insersection point on polyon of 
+                                                                            //  pFace_surfaceStepOnPosFeature
+                                  bool & bGapsEncountered, // is the loop gaps_in
+                                  CPtrArray*&     pFace_surfaceStepPtrArray,// collection of all face_surfaces             
+                                  bool& bIntersect,
+                                  CClosed_shellStep* pShell
+                                , CCartesian_pointStepPtrArray*& pCartesian_pointStepPtrArray
+                              //, thingList&          rNegThingsList
+                                )// do the bb intersect
+{
+  if((((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->px[1]<=
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->px[1]&&
+
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->px[1]>=
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->px[0])  ||
+
+     (((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->px[0]<=
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->px[1]&&
+
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->px[0]>=
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->px[0])  ||
+
+     (((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->px[1]<=
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->px[1]&&
+
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->px[1]>=
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->px[0])  ||
+
+     (((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->px[0]<=
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->px[1]&&
+
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->px[0]>=
+      ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->px[0])){
+
+
+    if((((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->py[1]<=
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->py[1]&&
+        
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->py[1]>=
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->py[0])  ||
+
+       (((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->py[0]<=
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->py[1]&&
+
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->py[0]>=
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->py[0])  ||
+
+       (((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->py[1]<=
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->py[1]&&
+
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->py[1]>=
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->py[0])  ||
+
+       (((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->py[0]<=
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->py[1]&&
+
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->py[0]>=
+        ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->py[0])){
+
+
+          if((((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->pz[1]<=
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->pz[1]&&
+
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->pz[1]>=
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->pz[0])  ||
+
+             (((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->pz[0]<=
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->pz[1]&&
+
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->pz[0]>=
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->pz[0])  ||
+
+             (((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->pz[1]<=
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->pz[1]&&
+
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->pz[1]>=
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->pz[0])  ||
+
+             (((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->pz[0]<=
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->pz[1]&&
+
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipn))->pz[0]>=
+              ((CPolygon*) GetScribView()->m_polygonarray.GetAt(ipp))->pz[0])){
+
+//they intersect
+                  bIntersect=true;
+                  faceXfaceFaceted( (CFace_surfaceStep *)pFace_surfaceStepPtrArray->GetAt( ipp), 
+                                    (CFace_surfaceStep *)pFace_surfaceStepPtrArray->GetAt( ipn),
+                                    pPolyIntersectionPoints , 
+                                    bGapsEncountered,
+                                    pFace_surfaceStepPtrArray
+                                  , pCartesian_pointStepPtrArray
+                                //, rNegThingsList
+                                  );
+                 }
+          }
+      }
+  
+  return S_OK;
+}
+
+// check the bb of the two things to see if they intersect!
+HRESULT step::thingXthingBBFaceted( agitoAssembly*                  pAssembly,// collection of all parts
+                                    int                             itn,       // index of negative CThing
+                                    CThing*                         pNegThing ,// the negative features whose faces will be 
+                                    // intersected against all faces in the assembly
+                                    CPtrArray*&                     pFace_surfaceStepPtrArray,
+                                    CClosed_shellStep*              pShell
+                                  , CCartesian_pointStepPtrArray*&  pCartesian_pointStepPtrArray
+                                  //, thingList&          rNegThingsList
+                                  )
+{
+  for ( int ipp = 0; ipp < GetScribView()->m_polygonarray.GetSize(); ipp++){
+    CPolygon *pPolygonOnPosFeature = (CPolygon *) GetScribView()->m_polygonarray.GetAt(ipp);
+    int itp = pPolygonOnPosFeature->MemberOfObject ;
+    if ( itp != itn ){
+//    bool bThingFound = false;
+//    for (int i=0; i< rNegThingsList.GetSize(); i++){
+//      if ((int) rNegThingsList.GetAt(i) == itn ){
+//        bThingFound=  true;
+//        break;
+//      }
+//    }
+//    if ( !bThingFound  )// dont subtract from neg features // wh 10/30/01 
+      if((((CThing*) GetScribView()->m_thingarray.GetAt(itp))->px[1]<=
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->px[1]&&
+
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->px[1]>=
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->px[0])||
+
+         (((CThing*) GetScribView()->m_thingarray.GetAt(itp))->px[0]<=
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->px[1]&&
+
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->px[0]>=
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->px[0])||
+
+         (((CThing*) GetScribView()->m_thingarray.GetAt(itn))->px[1]<=
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->px[1]&&
+
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->px[1]>=
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->px[0])||
+
+         (((CThing*) GetScribView()->m_thingarray.GetAt(itn))->px[0]<=
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->px[1]&&
+
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->px[0]>=
+          ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->px[0])){
+
+
+        if((((CThing*) GetScribView()->m_thingarray.GetAt(itp))->py[1]<=
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->py[1]&&
+        
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->py[1]>=
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->py[0])||
+
+           (((CThing*) GetScribView()->m_thingarray.GetAt(itp))->py[0]<=
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->py[1]&&
+
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->py[0]>=
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->py[0])||
+
+           (((CThing*) GetScribView()->m_thingarray.GetAt(itn))->py[1]<=
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->py[1]&&
+
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->py[1]>=
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->py[0])||
+
+           (((CThing*) GetScribView()->m_thingarray.GetAt(itn))->py[0]<=
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->py[1]&&
+
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->py[0]>=
+            ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->py[0])){
+
+
+              if((((CThing*) GetScribView()->m_thingarray.GetAt(itp))->pz[1]<=
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->pz[1]&&
+
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->pz[1]>=
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->pz[0])||
+
+                 (((CThing*) GetScribView()->m_thingarray.GetAt(itp))->pz[0]<=
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->pz[1]&&
+
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->pz[0]>=
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->pz[0])||
+
+                 (((CThing*) GetScribView()->m_thingarray.GetAt(itn))->pz[1]<=
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->pz[1]&&
+
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->pz[1]>=
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->pz[0])||
+
+                 (((CThing*) GetScribView()->m_thingarray.GetAt(itn))->pz[0]<=
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->pz[1]&&
+
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itn))->pz[0]>=
+                  ((CThing*) GetScribView()->m_thingarray.GetAt(itp))->pz[0])){
+
+                      surfXsurfFaceted(  pAssembly, 
+                                         itn, 
+                                         pNegThing,
+                                         pFace_surfaceStepPtrArray, 
+                                         pPolygonOnPosFeature
+                                         , ipp
+                                        ,  pShell
+                                       , pCartesian_pointStepPtrArray
+                                         //,       rNegThingsList
+                                         );
+
+                     }
+              }
+          }
+    }// fi
+  // now comes the fun part, those bounds which intersected the outer_bounds need to be stitched together
+
+    //  stitchIntersectionsFromAllSurfaces();
+  }//next ip
+  
+  return S_OK;
+}
+ 
+// tbd should be a method of bounds
+// check to see if the outer_bound contain the [inner]bounds
+HRESULT step::boundsContainBoundsFaceted( CFace_surfaceStep*      pFace_surfaceStepOnPosFeature, // positive features's face
+                                          boundsIntersectBounds&  rBoundsXbounds,
+                                          CPoly_loopStep*         pInner_boundPoints )// tested for [inner]bounds
+                                                                                           // insersection point on 
+                                                                                           //  polyon of pFace_surfaceStepOnPosFeature
+{
+  CFace_outer_boundStep* pFace_outer_boundStep= (CFace_outer_boundStep*)
+    pFace_surfaceStepOnPosFeature->GetFace_outer_bound();
+  CPoly_loopStep* pPLoop = dynamic_cast<CPoly_loopStep*>(pFace_outer_boundStep->m_bound);
+
+  int ivm1 = pPLoop->m_aPolygonVertices.GetSize()-1;     
+  CPlaneStep* pPlaneStepOnPosFeature = dynamic_cast<CPlaneStep*>
+    (pFace_surfaceStepOnPosFeature->m_pFace_geometry);
+
+  if (NULL != pPlaneStepOnPosFeature ){
+    CDirectionStep* pFaceNormal = pPlaneStepOnPosFeature->m_pPosition->m_pAxis;
+
+    pPLoop->outerloopContainmentFaceted( 
+                                         pFaceNormal , 
+                                         &(pInner_boundPoints->m_aPolygonVertices), 
+                                         rBoundsXbounds);
+  }//fi
+  
+  return S_OK;
+}
 
 // Perform the surface-surface intersection.
 // We do not intersect two nonexistant surfaces, 
@@ -1452,6 +2483,9 @@ HRESULT step::surfXsurfFaceted( agitoAssembly*                 pAssembly// colle
               return E_OUTOFMEMORY;
             }// wh 10/17/01
             if (bGapsEncountered) {
+  #ifdef _DEBUG
+              pPoly_loopStepIntersection->m_szLabelName += " gaps_in ";
+  #endif 
               pPoly_loopStepIntersection->m_bGap = true;
             }
             for (int i = 3; i < polyIntersectionPoints.GetSize(); i++){
@@ -1782,6 +2816,11 @@ HRESULT step::buildShellsFaceted( FILE*                 stream,
     }
   }
   catch(...){
+#ifdef _DEBUG
+    iraroArchive* p_ir = (iraroArchive*) ar.m_archives.GetAt(0);
+    iraroArchive& ir = *p_ir ;
+    ir << "/* mem leak detected while cleaning up */\n";
+#endif
   }
 #if     NOTIFICATION 
   if (m_bWriteFile){
@@ -1880,7 +2919,13 @@ HRESULT step::preShellsFaceted( FILE*                 stream,
       }
     }
     catch(...){
-
+#ifdef _DEBUG
+      if (m_bWriteFile) {
+        iraroArchive* p_ir = (iraroArchive*) ar.m_archives.GetAt(0);
+        iraroArchive& ir = *p_ir ;
+        ir << "/* mem leak detected while cleaning up */\n";
+      }
+#endif
     }
 #if     NOTIFICATION 
   if (m_bWriteFile)
@@ -1894,6 +2939,13 @@ HRESULT step::preShellsFaceted( FILE*                 stream,
   return S_OK;
 }
 
+/*
+HRESULT step::checkFacesFaceted( )
+{
+
+  return S_OK;
+}
+*/
 // connnect the faces and shells together
 HRESULT step::connectFacesFaceted( agitoAssembly* pAssembly, 
                                    CPtrArray*& pFace_surfaceStepPtrArray )
@@ -2054,7 +3106,30 @@ HRESULT step::connectFacesFaceted( agitoAssembly* pAssembly,
                         <= 
                         pThing->lastpolyno; j++) {
 
+#if _DEBUG
+// Ralph, look here, why is j out of range?? wh 10/22/01
+              // this was added when trying to debug ree89!
+              ASSERT((GetScribView()->m_polygonarray.GetSize()) > j);
 
+                if ( (GetScribView()->m_polygonarray.GetSize()) <= j) {
+                  #ifdef  EXPOSE      
+                    fprintf( g_errorLog, "\n something is wrong with the TasDraw m_polygonarray internal data structures \n m_polygonarray [%d]", j);
+                    fprintf( g_errorLog, " is out of bound. m_polygonarray.GetSize() = %d */\n", GetScribView()->m_polygonarray.GetSize());
+                  #endif//EXPOSE
+                }
+
+              ASSERT((pFace_surfaceStepPtrArray->GetSize()) > j);
+                if ((pFace_surfaceStepPtrArray->GetSize()) <= j) {
+                  #ifdef  EXPOSE      
+                    fprintf( g_errorLog, "something is wrong with the pFace_surfaceStepPtrArray[%d] > %d internal data structures ", j, (pFace_surfaceStepPtrArray->GetSize()) );
+                  #endif//EXPOSE
+                  #if 0
+                        iraroArchive* p_ir = (iraroArchive*) ar.m_archives.GetAt(0);
+                        iraroArchive& ir = *p_ir ;
+                        ir << "/* something is wrong with the pFace_surfaceStepPtrArray data structures */\n";
+                  #endif//_DEBUG
+                }
+#endif //_DEBUG
 
               if ( ((GetScribView()->m_polygonarray.GetSize()) <= j) ||
                    (    (pFace_surfaceStepPtrArray->GetSize()) <= j)
@@ -2155,6 +3230,23 @@ HRESULT step::preAssembliesFaceted(   stepArchive&          ar,
     pFaceted_brepStep->m_pTechnadrawEntitites->AddTech( (CStepPtr *)
       GetScribView()->m_modelarray.GetAt(im));
 
+#if 0
+    if (0){
+      CCartesian_pointStep* pLocation = new CCartesian_pointStep( NULL, 0.0e0);
+      if (NULL==pFaceted_brepStep ){
+        return E_OUTOFMEMORY;
+      }
+      pLocation *=
+      pPart->m_pCartesian_tranformation_operator_3dStep;
+      CAxis2_placement_3dStep *pAxis2_placement_3dStep = new 
+        CAxis2_placement_3dStep( *pLocation );
+      if (NULL==pAxis2_placement_3dStep ){
+        return E_OUTOFMEMORY;
+      }
+      pFaceted_brepStepArray->Add( pAxis2_placement_3dStep );
+      pAxis2_placement_3dStep->addRef();
+    }
+#endif
 
     pFaceted_brepStepArray->Add( pFaceted_brepStep);
   }//im
@@ -2438,7 +3530,9 @@ HRESULT step::buildLeftFaceted(
                                  pPolygonZ->NormalX, 
                                 -pPolygonZ->NormalY, // rv 03/28/01
                                  pPolygonZ->NormalZ);
-
+#ifdef _DEBUG
+    pAxis ->m_szLabelName = "poly axis";
+#endif
 
 //    ASSERT(!_isnan(pPolygonZ->NormalX));
     if (_isnan(pPolygonZ->NormalX)){
@@ -2558,7 +3652,9 @@ HRESULT step::preFacesFaceted( FILE*                          stream,
           break;
         } 
         if (NULL !=pRef_dir){ // wh 04/09/01
-
+#ifdef _DEBUG
+          pRef_dir->m_szLabelName = "up";
+#endif
         }
         else {// wh 04/09/01
           iraroArchive* p_ir = (iraroArchive*) ar.m_archives.GetAt( 0);//pCartesian_pointStep1->getNum());
@@ -2759,6 +3855,9 @@ HRESULT step::buildFacesFaceted( FILE*                          stream,
           break;
         } 
         if (NULL !=pRef_dir){ // wh 04/09/01
+#ifdef _DEBUG
+          pRef_dir->m_szLabelName = "up";
+#endif
         }
         else {// wh 04/09/01
           iraroArchive* p_ir = (iraroArchive*) ar.m_archives.GetAt( 0);//pCartesian_pointStep1->getNum());
@@ -3432,7 +4531,24 @@ HRESULT step::buildVerticesFaceted( FILE *                stream,
 
   try{
 
-
+#ifdef  _DEBUG
+    for ( iv = pVertex_pointStepPtrArray->GetSize()-1;iv >= 0;iv--){
+      CVertex_pointStep* pVertex_point = (CVertex_pointStep* )
+        pVertex_pointStepPtrArray->GetAt(iv);
+      try{
+        CBaseStep* pBS = dynamic_cast<CBaseStep*>(pVertex_point);
+        if (NULL == pBS){
+          throw 0;
+        }
+      } 
+      catch (...){
+#ifdef  EXPOSE      
+        int ipf = 
+        fprintf( g_errorLog, "CVertex_pointStepPtrArray[ %d ] released too often.\n", iv);
+#endif//EXPOSE   
+      }
+    }
+#endif//_DEBUG
 
     delete pVertex_pointStepPtrArray;
 
@@ -3449,7 +4565,29 @@ HRESULT step::buildVerticesFaceted( FILE *                stream,
   return hr;
 }
 
+ 
+HRESULT step::stepClasses( bool bWriteFile)
+{
+  FILE* stream =NULL;
+  stepArchive       ar;
 
+  m_bWriteFile = bWriteFile;
+  CRepresentationStep::m_pStep = this;
+  
+  m_pSelectRepresentationStep = 
+    dynamic_cast<CRepresentationStep*>(m_pFaceted_brep_shape_representationStep);
+
+  HRESULT hr = 
+    preVerticesFaceted( stream, 
+                        ar, 
+                        shellBasedSurfaceModel ,
+                        m_pSelectRepresentationStep);
+
+  m_pFaceted_brep_shape_representationStep= 
+    dynamic_cast<CFaceted_brep_shape_representationStep*>(m_pSelectRepresentationStep);
+
+  return hr;
+}
 
  
 // translate from technadraw entities to STEP entities.
@@ -3687,3 +4825,190 @@ garbage_collection( CPtrArray& m_ptrArrayAgito)
   return ;
 }
 
+HRESULT step::ncreatestep()
+{
+  CRepresentationStep::m_pStep = this;
+  m_pSelectRepresentationStep = 
+    dynamic_cast<CRepresentationStep*>(m_pFaceted_brep_shape_representationStep);
+  return S_OK;
+}
+
+#pragma message( "Building TASDraw.ocx version:" defSTRFILEVER "\n")
+
+// These data structures form a class hierarchy!
+// Next, we have to traverse the topological entities and 
+// fill in the correct values
+
+
+
+//////////////////////////////////////////////////////////
+// who  date      history
+//-----------------------
+// wh   03/08/01  big question here?  Should we have generate our 
+//                classes from an express 
+//                schema config_control_design 
+//                (as in config_control_design.exp) file.
+//                Instead, we hard code our classes from Express-I 
+//                (this approach 
+//                involves less work).  If we generate our 
+//                classes from the schema using object serialization, 
+//                the classes can 
+//                change according to any changes which might arise in 
+//                the future. 
+//
+// wh   04/04/01  added code to support layering, text, model->on
+// wh   04/04/01  move code into subroutines to make it readable
+// wh   04/05/01  rotate surfaces by transformation, 
+//                debug code for layering, model->on
+// wh   04/05/01  I divided up the code into two major classes, 
+//                those that work just on faceted, 
+//                  and those that work just one advanced 
+//                because I want my working code 
+//                  facetted not to get touched until I get all done!!
+// wh   04/09/01  renamed StepSer.cpp from ScribVw3.cpp
+// wh   04/27/01  topological repair.  remove face, 
+//                replace by [inner]bound, reverse top!!
+// wh   04/27/01  bug in that we assume that there is only one model 
+//                when working with things, 
+//                  fix that when you come up for air
+//                reattach the surfaces to the intersection loops.
+//                outer bound intersects with neg feature's bound case.
+//                coincident planes on side faces.
+//                negative features need to have topology reversed.
+//                Damn sliver edges need to be mended.
+// wh   05/17/01  instrux 's "blindhole" problem encountered with face 
+//                in gaps_in, 
+//                should I fix it, or expect it to be given correctly 
+//                to me?  
+//                This falls under the category of healing, 
+//                where there are entire products devoted to this task, 
+//                see Spatial ACIS healing husk!  
+//                Theorem Solutions as well.
+// wh   05/17/01  blindhole still generating 31 edges while as I only 
+//                see 30, where is it coming from?
+// wh   05/17/01  Need to fix code for thruhole case to deal with 
+//                breaking poly into multiple polys, gads!
+// wh   05/19/01  incorrect face is being zeroed, find out the problem, 
+//                most likely the map is wrong or 
+//                you are using face_surface_ptr_array where you should 
+//                be using face->mCFS_faces!  Looks fine
+//                See if the hole's side's flipped incorrectly faces 
+//                might cause problems in how the 
+//                far face is being generated.  
+// wh   05/20/01  This does not seem to affect the ordering of the faces!
+// wh   05/20/01  Hack it for the time being by incrementing the 
+//                face index by one, find INCREMENT_FACEINDEX 
+// wh   05/20/01  blindhole's far face seems to still be facing the 
+//                wrong way, even after modifying instrux file.
+//                Moreover, blind hole's far side poly_loop seem to be 
+//                facing wrong way now! 
+// wh   05/22/01  cut holes edges must be added in CW order
+// wh   05/24/01  added comments and notes
+// wh   06/04/01  missing local_time info
+// wh   06/07/01  use old way of negating csg, 
+//                  i.e. find the things with surfaces where exists == 0, 
+//                  then negate feature
+// wh   06/07/01  Error in old way. problem is that once the array gets flipped, 
+//                  entries in CCartesianPointStepArray are not indexed 
+//                  via m_hash regardless of ordering!
+// wh   06/07/01  when using old way, error in bb, polyloop seems to point to spurious 
+//                uninit memory!  Probably due to old data not being flushed!  moved entry in g_ptrArray
+//                First priority bug!              
+// wh   06/08/01  fixed bug with gaps_in polyloops!
+// wh   06/08/01  we still have a bug with something in instrux, 
+//                  my guess is that one of the polyloops is out of bounds, 
+//                  thus should be discarded!  Suggest that we display the file with steptools viewer??  
+//                Steptools & theorem solutions have a one-shot $50/file viewer tool.
+//                Easier solution is to try to replicate bug on some simple parts which are easy to construct by hand!!
+//                Ask R. Vince if he prefers error logging in step file or external file step.err
+//                We should serialize immediately to disk file CArchive rather than to CString?
+// wh   07/05/01  use bb for things, throw out bounds intersections where the bb's do not intersect
+// wh   07/07/01  added boundsContainBoundsFaceted & outerloopContainmentFaceted
+// wh   07/09/01  only 3 leaks, CPlaneStep, CAxis2_placement_3dStep, CClosed_shellStep, probably due to overwritten entry in g_ptrArray
+// wh   07/08/01  Why doesn't the thru_hole example run through the intersection code!  
+//                Just adding to a dummy cfs and then added to the list.
+//                2 rings missing on a thruhole!  Problem fixed due to change in allocating 
+//                  CCartestianPointStep off the stack.
+// wh   07/10/01  serious error in condense_array
+// wh   07/10/01  instead of condenseArray, why not fix this problem [zero entries in big list] in the Add, 
+//                create a freeEntries list, and use that when deciding where an entry should be added
+// wh   07/10/01  fixed big problem in face.intersect, CCartesian_PointStep must be returned off the heap, not the stack
+// wh   07/11/01  problem in CartesianPtrArray or its hash pointstep.cpp line 118
+// wh   07/11/01  should you write an algorithm to calculate the holes, so that you can use it in Euler eqn?
+// wh   07/14/01  added interior intersections to loop MOD_NEG_FEATURE
+// wh   07/15/01  in twothruhole, why aren't neg-neg intersections showing up, probably are, but are being ignored and not added to the list
+// wh   07/16/01  should you write the algorithm to verify the topology?
+// wh   07/16/01  should you change the face intersection algorithm (faceXfaceFaceted, thingXthingBBFaceted & polyXpolyBBFaceted) to work on STEP entities rather than Agito entities?
+// wh   07/16/01  supressLayersFaceted is zeroing wrong entry on incorrect shell, still wrong
+// wh   07/17/01  split generates bad face
+// wh   07/18/01  uncovered errors in FOB, FB;  problem in outerloopContainmentFaceted not being general 
+//                  enough and detecting intersecting bounds conditions
+// wh   07/22/01  bug in boundsXboundsFaceted
+// wh   07/23/01  TBD, Euler cutting away of face by negative feature!
+// wh   07/24/01  TBD, Euler merge of bodies (just like Euler subtract)
+// wh   07/24/01  ordered intersections wrt to param.  Should it be increasing or decreasing
+// wh             with that fix stwohole work looking into the small hole
+// wh   08/22/01  we have a bug in that an reference is maintained on an object which has 
+//                  already been deleted!
+//                Suggested solution, fix the reference counting to take care of this problem!
+// wh   09/07/01  major bug, use hash jv instead of jvm1 to get iv
+//                  int jvm1 = (int )CCartesian_pointStepPtrArray::m_hash->GetAt(ivm1);
+// wh   09/07/01  added support for dumping info to file technadraw.log for debugging purposes.  
+// wh   09/07/01    Define variable EXPOSE to expose inside of classes!
+// wh   09/09/01  refCnt works for tetra123 
+// wh   09/10/01  debugging refCnt for unit_block 
+// wh   09/10/01  debugging refCnt for 6_sided_can 
+// wh   09/11/01  don't use & in CAxis2_Placement_3dStep,
+// wh   09/12/01  major bug in that some info was still being written out to g_errorLog 
+//                in release but not wrapped in EXPOSE
+// wh   09/12/01  don't use & in CPlacementStep,
+// wh   09/19/01  rearranged code for CPolygon.SameLastFirstVertex
+// wh   09/26/01  no leading zeros in timestamp!  SolidWorks doesn't like it, even though 
+//                  WiseView and ExpressEngine accept it!
+// wh   09/28/01  Encountered polygons with < 3 verticies, what should I do? ignore the entity
+// wh   09/29/01  set axis from polygon if not available elsewhere, direction is arbitrary
+// wh   09/30/01  set MERGE_BOUNDS_INTERSECTION true gives good results for otwohole.stp, 
+//                  however memory problems
+// wh   09/30/01  set MOD_NEG_FEATURE true gives bad results, because of error in CFace_surfaceStep::split
+// wh   10/01/01  fixing memory leaks for LINE, CFACE_SURFACEStep
+// wh   10/02/01  CFACE_SURFACEStep leak plugged
+// wh   10/19/01  CrcPtrArray added for automatic refCnting
+// wh   10/22/01  Use CrcPtrArray for polyloops as well.
+// wh   10/28/01  Note: make sure that matter is to the left!
+// wh   10/28/01  Note: This would all be a lot safer if you used Euler Ops!
+// wh   10/28/01  Note: You should build Connected_face_sets from each of the CThings first, 
+//                  then merge those
+// wh   10/28/01  Note: Develop the merge code!
+// wh   11/06/01  problem:  Not split bound , therefore cannot join them.  
+//                  however they were not intersected properly, due to tol issue
+// wh   11/13/01  Note: When a loop is split, its partner should be split as well!
+// wh   11/14/01  activated AdvancedStep section in debug mode
+
+//# define SPLIT_NEG_FEATURE true
+//There are 3 bugs illustrated.  
+//1)  The wrong vertex is being identified, probably lost on the stack after a function call 
+//     or something??  Or probably the intersection code chose the wrong vertex???  Be careful 
+//     to do the calculations properly from a Numerical analysis standpoint.  Don't just 
+//     increase the tolerance, you will cause condensation of close points elsewhere in the code.
+//2)  Intersections on an edge of a loop should also be propagated to its parner loop (the other 
+//      loop with the same edge)
+//3)  Degenerate loops/faces should be thrown out! (loops containing zero area, e.g. A B B A loops).
+//     I had seen this when you run tetra123 through the splitting code!  It works so well, 
+//       it even splits when it doesn't have to!
+
+
+// wh   11/25/01  pre[Entity][type] added to deal with CREATESTEP functionality.  
+//                  Eventually, those will be removed, once I am sure that I have fixed more than is broken.
+// wh   01/04/02  Throw away the other side of the split
+// wh   01/22/02  fix memory leaks
+// wh   01/24/02  properly classify and discard exterior surface loops
+// wh   01/28/02  makeIslands
+// wh   01/29/02  went back and now defined CREATESTEP
+// wh   02/10/02  add intersection pts to positive loops as well
+// wh   02/13/02  problem is that splitting modifies the body, solution is first to mark up 
+//                  intersections to be done, then split.
+// wh   02/15/02  fixed CPoly_loopStep::sortIntersectionsCCW
+// wh   02/25/02  problem in that face containment check 
+//                  happens too late in the code and detects unnecessary intersections!
+// WH   03/07/02  buildLeftFaceted inconsistency between instrux for atlas files vs commozzi 
+//                and the way in which same first_last vertex are being handled
