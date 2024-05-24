@@ -1,0 +1,2 @@
+#define walt_VERSION_MAJOR @walt_VERSION_MAJOR@
+#define walt_VERSION_MINOR @walt_VERSION_MINOR@
