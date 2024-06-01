@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "CurveStep.h"
 #include "stepArchive.h"
 

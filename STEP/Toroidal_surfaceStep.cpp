@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 //#include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "Toroidal_surfaceStep.h"
 
 #ifdef _DEBUG

@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "Representation_mapStep.h"
 #include "Mapped_itemStep.h"
 #include "Representation_itemStep.h"

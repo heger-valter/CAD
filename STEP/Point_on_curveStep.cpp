@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 //#include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "Point_on_curveStep.h"
 
 #ifdef _DEBUG

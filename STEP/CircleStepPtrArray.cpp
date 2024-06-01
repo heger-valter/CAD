@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "CircleStepPtrArray.h"
 #include "CircleStep.h"
 #include "agitoPtrArray.h"

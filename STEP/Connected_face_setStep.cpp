@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "Connected_face_setStep.h"
 #include "stepArchive.h"
 #include "faceStep.h"

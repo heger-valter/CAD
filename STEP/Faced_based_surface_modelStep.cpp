@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 ////#include "stdafx.h"
-//#include "scribble.h"
+//#ifdef _WINDOWS 
+#include "scribble.h"
+#endif
+
 #include "Shell_based_surface_modelStep.h"
 #include "Geometric_representation_itemStep.h"
 

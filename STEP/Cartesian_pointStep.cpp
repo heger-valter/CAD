@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "Cartesian_pointStep.h"
 #include "math.h"//large
 #include "Cartesian_tranformation_operator_3dStep.h"

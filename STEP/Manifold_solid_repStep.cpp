@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 //#include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "Manifold_solid_repStep.h"
 
 #ifdef _DEBUG

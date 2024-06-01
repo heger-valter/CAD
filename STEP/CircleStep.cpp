@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "CircleStep.h"
 //#include "Axis2_placement_2dStep.h"
 #include "PlacementStep.h"

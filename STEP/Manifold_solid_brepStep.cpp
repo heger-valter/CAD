@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
-//#include "scribble.h"
+//#ifdef _WINDOWS 
+#include "scribble.h"
+#endif
+
 #include "Manifold_solid_brepStep.h"
 #include "stepArchive.h"
 #include "Connected_face_setStep.h"

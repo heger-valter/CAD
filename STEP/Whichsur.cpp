@@ -2,7 +2,10 @@
 //
 
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "whichsur.h"
 #include "resource.h"
 

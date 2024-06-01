@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 //#include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "HyperbolaStep.h"
 
 #ifdef _DEBUG

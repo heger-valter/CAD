@@ -4,7 +4,10 @@
 
 #include "afx.h"
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "Cartesian_pointStep.h"
 #include "Cartesian_pointStepPtrArray.h"
 

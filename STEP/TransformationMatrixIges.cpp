@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 //#include "stdafx.h"
-//#include "scribble.h"
+//#ifdef _WINDOWS 
+#include "scribble.h"
+#endif
+
 #include "TransformationMatrixIges.h"
 
 #ifdef _DEBUG

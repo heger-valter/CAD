@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "Elementary_surfaceStep.h"
 #include "VectorStep.h"
 #include "LineStep.h"

@@ -120,7 +120,10 @@
 
 #include "afxwin.h" 
 #include "stdafx.h" 
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "stepArchive.h"
 #include "ScribVw.h"
 #include "VertexStep.h"

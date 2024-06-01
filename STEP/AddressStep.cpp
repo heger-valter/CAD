@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "AddressStep.h"
 
 #ifdef _DEBUG
@@ -17,7 +20,7 @@ static char THIS_FILE[]=__FILE__;
 //////////////////////////////////////////////////////////////////////
 
 CAddressStep::CAddressStep()
-: m_szInternal_location       ("www.fluidpowerhub.com")
+: m_szInternal_location       ("www.github.com/heger-valter/CAD/STEP")
 , m_szStreet_number           ("318 ")
 , m_szStreet                  ("W. Randolph Street")
 , m_szPostal_box              ("Suite 201")
@@ -26,8 +29,8 @@ CAddressStep::CAddressStep()
 , m_szPostal_code             ("60606")
 , m_szCountry                 ("USA")
 //, m_szFacsimile_number        ("")
-, m_szTelephone_number        ("1-866-GO AGITO")
-, m_szElectronic_mail_address ("info@fluidpowerhub.com")
+, m_szTelephone_number        ("1-901-492-1038")
+, m_szElectronic_mail_address ("heger.valter@gmail.com")
 //, m_szTelex_number            ("")
 {
   nameClass("ADDRESS");

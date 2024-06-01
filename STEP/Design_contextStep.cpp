@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
-//#include "scribble.h"
+//#ifdef _WINDOWS 
+#include "scribble.h"
+#endif
+
 #include "Design_contextStep.h"
 #include "BaseStep.h"
 #include "stepArchive.h"

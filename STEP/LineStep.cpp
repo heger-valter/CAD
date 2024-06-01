@@ -4,7 +4,10 @@
 
 #include "stdafx.h"
 #include "baseStep.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "LineStep.h"
 #include "PointStep.h"
 #include "Cartesian_pointStep.h"

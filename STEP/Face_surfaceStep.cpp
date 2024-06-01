@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#ifdef _WINDOWS 
 #include "scribble.h"
+#endif
+
 #include "Face_surfaceStep.h"
 #include "Face_boundStep.h"
 #include "ScribVw.h"
