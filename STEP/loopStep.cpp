@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "loopStep.h"
 //#include "Poly_loopStep.h"
 

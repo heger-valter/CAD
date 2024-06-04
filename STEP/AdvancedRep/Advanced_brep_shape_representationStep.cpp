@@ -5,7 +5,16 @@
 //#include <string>
 //CString.h"
 
+#ifdef _WINDOWS
+#ifdef _WINDOWS
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
+#endif
+"
+#endif
+"
 #include "Advanced_brep_shape_representationStep.h"
 #include "Manifold_solid_brepStep.h"
 #include "Connected_face_setStep.h"

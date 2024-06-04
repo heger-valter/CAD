@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "Representation_itemStep.h"
 #include "stepArchive.h"
 #include "StepSer.h"

@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "DirectionStep.h"
 #include "stepArchive.h"
 #include "PointStep.h"

@@ -5,7 +5,10 @@
 //#include <string>
 //CString.h"
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "Faceted_brepStep.h"
 #include "Manifold_solid_brepStep.h"
 #include "Connected_face_setStep.h"

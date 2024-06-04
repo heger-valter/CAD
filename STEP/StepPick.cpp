@@ -1,7 +1,10 @@
 // StepPick.cpp : implementation file
 //
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #ifdef _WINDOWS 
 #include "scribble.h"
 #endif

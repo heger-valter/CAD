@@ -2,7 +2,10 @@
 //
 
 #ifdef _WINDOWS
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #endif
 #ifdef _WINDOWS 
 #include "scribble.h"

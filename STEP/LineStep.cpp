@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "baseStep.h"
 #ifdef _WINDOWS 
 #include "scribble.h"

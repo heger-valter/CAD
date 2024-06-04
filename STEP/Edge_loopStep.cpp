@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 //#include <STDDEF.H>
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "stepArchive.h"
 #include "Edge_loopStep.h"
 #include "loopStep.h"

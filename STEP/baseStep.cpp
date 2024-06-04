@@ -7,7 +7,10 @@
 
 #include "assert.h"
 #include "afx.h"
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include <float.h>// isnan
 
 #include "baseStep.h"

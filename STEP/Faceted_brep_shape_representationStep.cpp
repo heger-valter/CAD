@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "Faceted_brep_shape_representationStep.h"
 #include "Manifold_solid_brepStep.h"
 #include "Connected_face_setStep.h"

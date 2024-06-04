@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "SurfaceStep.h"
 #include "stepArchive.h"
 

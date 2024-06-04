@@ -4,7 +4,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include <stdlib.h>
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "BaseStep.h"
 
 extern const int iOUT_OF_BOUNDS;

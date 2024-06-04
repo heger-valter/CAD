@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "stepArchive.h"
 #include "Geometric_representation_contextStep.h"
 #include "baseStep.h"//extern enum shellStepSelect;

@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "ScribVw.h"
 #include "Face_boundStep.h"
 #include "loopStep.h"

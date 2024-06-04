@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "VectorStep.h"
 #include "stepArchive.h"
 #include "VectorStep.h"

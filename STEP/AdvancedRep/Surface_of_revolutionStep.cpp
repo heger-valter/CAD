@@ -2,7 +2,16 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
+#ifdef _WINDOWS
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
+#endif
+"
+#endif
+"
 #ifdef _WINDOWS 
 #include "scribble.h"
 #endif

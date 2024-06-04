@@ -1,7 +1,10 @@
 // Connected_face_setStep.cpp: implementation of the CConnected_face_setStep class.
 //
 //////////////////////////////////////////////////////////////////////
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #ifdef _WINDOWS 
 #include "scribble.h"
 #endif

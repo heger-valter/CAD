@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "afx.h"
 #include "PlacementStep.h"
 #include "Cartesian_pointStep.h"

@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "assert.h"  //rv
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "afxcoll.h"
 //#include "windef.h"  //max
 #include "math.h"  // fabs

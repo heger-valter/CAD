@@ -3,7 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "afx.h"
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #ifdef _WINDOWS 
 #include "scribble.h"
 #endif

@@ -119,7 +119,10 @@
 #include <stdlib.h>   // _MAX_PATH
 
 #include "afxwin.h" 
-#include "stdafx.h" 
+#ifdef _WINDOWS
+#include "stdafx.h"
+#endif
+ 
 #ifdef _WINDOWS 
 #include "scribble.h"
 #endif

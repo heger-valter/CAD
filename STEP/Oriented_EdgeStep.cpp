@@ -2,7 +2,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+#ifdef _WINDOWS
 #include "stdafx.h"
+#endif
+
 #include "Oriented_EdgeStep.h"
 #include "stepArchive.h"
 #include "Edge_curveStep.h"
