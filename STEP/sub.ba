@@ -1,0 +1,4 @@
+#! /bin/bash
+set -v
+find . -name '*.cpp' -exec sed -i -e 's/#include "stdafx.h"/#ifdef _WINDOWS\n#include "stdafx.h"\n#endif\n"/g' {} \;
+
